@@ -780,17 +780,17 @@ class UrlSnarferResponse:
             title += ""
         if self.nsfw > 0 or self.private:
             title += "("
+            
             if self.nsfw == 2:
-                title += "~NSFW"
-            elif self.nsfw == 1:
                 title += "NSFW"
+            elif self.nsfw == 1:
+                title += "~NSFW"
             elif self.nsfw != 0:
                 title += "?NSFW"
 
-            if self.nsfw > 0:
-                title += ","
-
             if self.private:
+                if self.nsfw > 0:
+                    title += ","
                 title += "P"
 
             title += ")"
