@@ -510,7 +510,7 @@ class UrlSnarfer:
 
         h = find_url_helper(url)
         if h is not None:
-            print "Using " + str(h)
+            print "Using %s" % str(h)
             return h.fetch(self, url, resp)
         if 'html' not in type:
             return None
@@ -583,9 +583,13 @@ class UrlSnarfer:
                 print response.description
 
         except urllib2.HTTPError, e:
-            raise Exception(str(e))
+            raise e
+        except UnicodeDecodeError, e:
+            print "UnicodeDecodeError: " + str(e)
+            pass
         except Exception, e:
             print "EX %s" % str(e)
+            print e.__class__.__name__
             response.alive = 0
             try:
                 self.db.set_url_dead(response.id)
