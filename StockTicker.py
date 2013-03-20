@@ -196,9 +196,17 @@ if __name__ != '__main__':
                     'c6' : "1",
                     'p2' : '100%'
                 }
+            elif m.group(1).upper() == "XCOM":
+                sym = {
+                    'n' : "XCOM",
+                    'l1' : "XCOM",
+                    'c6' : "1",
+                    'p2' : "JOY/PAIN=100%?"
+                }
             else:
                 sym = self.get_sym(event, m.group(1))
 
+            print m.group(1).upper()
             change = float(sym['c6'])
             color = ""
 
@@ -210,7 +218,14 @@ if __name__ != '__main__':
                 color = "\\\\r"
 
             if sym['p2'] != "N/A":
-                self.say(event, "%s%s: %s (%s %s P/E %s Cap $%s)" % (color, sym['n'], sym['l1'], sym['c6'], sym['p2'], sym['r'], sym['j1']))
+                msg = "%s%s: " % (color, sym['n'])
+                msg += "%s (%s %s" % (sym['l1'], sym['c6'], sym['p2'])
+                if 'r' in sym and sym['r'] != "N/A":
+                    msg += " P/E %s" % sym['r']
+                if 'j1' in sym and sym['j1'] != "N/A":
+                    msg += " Cap %s" % sym['j1']
+                msg += ")"
+                self.say(event, msg)
             else:
                 self.social(event, "moon", event.from_who, "Invalid symbol %s" % sym['n'])
 
@@ -219,10 +234,21 @@ if __name__ == '__main__':
     st = StockTicker()
 
     sym = 'FB'
+    if len(sys.argv) > 1:
+        sym = sys.argv[1]
 
     resp = st.get_sym(None, sym)
     print resp
-
-    print "%s: %s (%s %s P/E %s Cap $%s)" % (resp['n'], resp['l1'], resp['c6'], resp['p2'], resp['r'], resp['j1'])
+    if resp['p2'] != "N/A":
+        msg = "%s: " % (resp['n'])
+        msg += "%s (%s %s" % (resp['l1'], resp['c6'], resp['p2'])
+        if 'r' in resp and resp['r'] != "N/A":
+            msg += " P/E %s" % resp['r']
+        if 'j1' in resp and resp['j1'] != "N/A":
+            msg += " Cap %s" % resp['j1']
+        msg += ")"
+        print msg
+    else:
+        print "Invalid symbol %s" % sym
 
 # vim: ts=4 sw=4 et
