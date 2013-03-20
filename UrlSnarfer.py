@@ -421,7 +421,7 @@ class UrlSnarfer:
             return None
 
         url = match.group(3)
-        mods = m.group(1)
+        mods = match.group(1)
 
         private = False
         nsfw = 0
