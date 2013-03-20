@@ -38,8 +38,9 @@ class VishnuBrowser:
             self.set_handle_robots(False)
             self.set_handle_refresh(False)
             self.addheaders = [
-                ('User-agent', 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; SLCC1; .NET CLR 2.0.50727; .NET CLR 3.0.04506; InfoPath.2)')
+                ('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.13+ (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2')
             ]
+#            self.set_debug_http(True)
 
 if __name__ == '__main__':
     b = VishnuBrowser(config.cookiejar)
