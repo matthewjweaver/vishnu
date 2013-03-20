@@ -18,7 +18,7 @@ import VishnuBrowser
 from config import *
 
 ipAddressRegex = re.compile(r"^((((([0-9]{1,3})\.){3})([0-9]{1,3}))((\/[^\s]+)|))$")
-urlRegex = re.compile(r".*(\s+|\!|\~\!|\||^|\^)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*).*")
+urlRegex = re.compile(r"\s*(([\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
 selfRefRegex = re.compile(r"http://(www.|)ice-nine.org/(l|link.php)/([A-Za-z0-9]+)")
 httpUrlRegex = re.compile(r"(https?://[^\]>\s]+)", re.I)
 googleRegex = re.compile(r"^(\w*\s*\|\s*|)@google (.*)", re.I)
@@ -416,22 +416,23 @@ class UrlSnarfer:
             terms = urlencode({'btnI' : "I'm Feeling Lucky", 'q': match.group(2)})
             urlLine = "http://www.google.com/search?hl=en&ie=ISO-8859-1&%s" % terms
 
-        match = urlRegex.match(urlLine)
+        match = urlRegex.search(urlLine)
         if match is None:
             return None
 
-        url = match.group(2)
-
-        if match.group(1) == "!":
-            nsfw = 2
-        elif match.group(1) == "~!":
-            nsfw = 1
-        else:
-            nsfw = 0
+        url = match.group(3)
+        mods = m.group(1)
 
         private = False
-        if match.group(1) == "^":
-            private = True
+        nsfw = 0
+        if mods:
+            if '!' in mods:
+                nsfw = 2
+            if '~' in mods:
+                nsfw = 1
+            if '^' in mods:
+                private = True
+
 
         # URL without a protocol:// prefix
         if not httpUrlRegex.search(url):
