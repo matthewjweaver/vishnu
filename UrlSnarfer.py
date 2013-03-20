@@ -63,28 +63,30 @@ class TwitterUrlHelper(UrlHelper):
         return False
 
     def fetch(self, snarfer, url, resp):
-        try:
-            resp = snarfer.open_url(url)
-            html = resp.read()
-            s = BeautifulSoup(html)
-            p = s.findAll('p', 'tweet-text')
-            text = None
-            if p:
-                for part in p[0].contents:
-                    if text is None:
-                        text = ""
-                    text += str(part)
-                text = re.sub(r'<[^>]*?>', '', text)
+        url = re.sub("/#!", "", url)
+        url = re.sub("^https", "http", url)
+        resp = snarfer.open_url(url)
+        html = resp.read()
+        s = BeautifulSoup(html)
+        p = s.findAll('p', 'tweet-text')
+        text = None
+        if p:
+            for part in p[0].contents:
+                if text is None:
+                    text = ""
+                text += str(part)
+            text = re.sub(r'<[^>]*?>', '', text)
 
-            p = s.findAll('strong', 'fullname')
-            if p:
-                name = p[0].string
-            if text and name:
-                return "%s: %s" % (name, text)
-            return None
-        except Exception, e:
-            print "EXCEPTION: %s" % str(e)
-            return None
+        #print html
+
+        p = s.findAll('strong', 'fullname')
+        print p
+        if p:
+            name = p[0].contents[0]
+        if text and name:
+            desc = "%s: %s" % (str(name), text.strip()) 
+            return desc
+        return None
 
 helpers.append(ImgUrUrlHelper())
 helpers.append(TwitterUrlHelper())
