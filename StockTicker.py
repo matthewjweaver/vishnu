@@ -192,13 +192,25 @@ if __name__ != '__main__':
         #u'vwap': {u'display_short': u'$61.99', u'value_int': 6198618}}
 
         def mtgox_ticker(self):
-            info = mtgox.ticker()
-            msg = "Avg: %s, High: %s, Low: %s, Vol: %s" % \
-                (info["avg"]["display_short"], 
-                info["high"]["display_short"], 
-                info["low"]["display_short"], 
-                info["vol"]["display_short"])
-            return msg
+            now = time.localtime(time.time())
+            open = int(time.mktime((now[0], now[1], now[2],
+                                    0, 0, 0,
+                                    now[6], now[7], now[8])))
+            res = mtgox._specific('trades?since=%d000000' % open, 'USD')
+            opening_price = res[0]['price_int']
+
+            ticker = mtgox.ticker()
+            current_value = ticker['last_all']['value_int']
+            change = current_value - opening_price
+            percentage = change / float(ticker['last_all']['value_int'])
+
+            sym = {
+                'n' : "MT.GOX",
+                'l1' : "%.02f" % (float(current_value) / 100000),
+                'c6' : "%+.02f" % (float(change) / 100000),
+                'p2' : "%+.02f%%" % (percentage * 100)
+            }
+            return sym
 
         def react(self, event):
             msg = event.message
@@ -228,8 +240,7 @@ if __name__ != '__main__':
                     'p2' : "JOY/PAIN=100%?"
                 }
             elif m.group(1).upper() == "MTGOX":
-                self.say(event, self.mtgox_ticker())
-                return
+                sym = self.mtgox_ticker()
             else:
                 sym = self.get_sym(event, m.group(1))
 
