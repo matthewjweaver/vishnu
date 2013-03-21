@@ -8,6 +8,7 @@ import csv
 import urllib
 from urllib import *
 import urllib2
+import mtgox
 
 import VishnuBrowser
 
@@ -176,6 +177,29 @@ if __name__ != '__main__':
             self.map("GeneralEvent")
             self.map("TalkEvent")
 
+        #>>> pprint.pprint(mtgox.ticker())
+        #{u'avg': {u'display_short': u'$61.91', u'value_int': 6190703},
+        #u'buy': {u'display_short': u'$63.00', u'value_int': 6300100},
+        #u'high': {u'display_short': u'$66.00', u'value_int': 6600000},
+        #u'last': {u'display_short': u'$63.70', u'value_int': 6370003},
+        #u'last_all': {u'display_short': u'$63.70', u'value_int': 6370003},
+        #u'last_local': {u'display_short': u'$63.70', u'value_int': 6370003},
+        #u'last_orig': {u'display_short': u'$63.70', u'value_int': 6370003},
+        #u'low': {u'display_short': u'$57.70', u'value_int': 5770200},
+        #u'now': u'1363823793330687',
+        #u'sell': {u'display_short': u'$63.70', u'value_int': 6370003},
+        #u'vol': {u'display_short': u'92,207.23\xa0BTC', u'value_int': 9220723363798L},
+        #u'vwap': {u'display_short': u'$61.99', u'value_int': 6198618}}
+
+        def mtgox_ticker(self):
+            info = mtgox.ticker()
+            msg = "Avg: %s, High: %s, Low: %s, Vol: %s" % \
+                (info["avg"]["display_short"], 
+                info["high"]["display_short"], 
+                info["low"]["display_short"], 
+                info["vol"]["display_short"])
+            return msg
+
         def react(self, event):
             msg = event.message
 
@@ -203,6 +227,9 @@ if __name__ != '__main__':
                     'c6' : "1",
                     'p2' : "JOY/PAIN=100%?"
                 }
+            elif m.group(1).upper() == "MTGOX":
+                self.say(event, self.mtgox_ticker())
+                return
             else:
                 sym = self.get_sym(event, m.group(1))
 
