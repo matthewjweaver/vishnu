@@ -208,7 +208,8 @@ if __name__ != '__main__':
                 'n' : "MT.GOX",
                 'l1' : "%.02f" % (float(current_value) / 100000),
                 'c6' : "%+.02f" % (float(change) / 100000),
-                'p2' : "%+.02f%%" % (percentage * 100)
+                'p2' : "%+.02f%%" % (percentage * 100),
+                'btc' : ticker['vol']['display_short']
             }
             return sym
 
@@ -262,6 +263,8 @@ if __name__ != '__main__':
                     msg += " P/E %s" % sym['r']
                 if 'j1' in sym and sym['j1'] != "N/A":
                     msg += " Cap %s" % sym['j1']
+                if 'btc' in sym:
+                    msg += " Volume %s" % sym['btc']
                 msg += ")"
                 self.say(event, msg)
             else:
