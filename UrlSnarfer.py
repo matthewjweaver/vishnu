@@ -168,8 +168,6 @@ class MysqlUrlDb(UrlDB):
         response.type = row[9]
         response.description = row[10]
 
-        response.title = response.pretty_title()
-
         return response
 
     def get_by_id(self, id):
@@ -244,6 +242,22 @@ class MysqlUrlDb(UrlDB):
         query = """UPDATE url SET description = %s WHERE id = %s"""
 
         args = [desc, urlno]
+
+        for i in [0, 1]:
+            try:
+                db = self.sqlDb
+                cursor = db.cursor()
+                cursor.execute(query, args)
+                db.commit()
+            except MySQLdb.OperationalError, e:
+                self.reconnect()
+            else:
+                break
+
+    def set_url_nsfw(self, urlno, nsfw):
+        query = """UPDATE url SET nsfw = %s WHERE id = %s"""
+
+        args = [nsfw, urlno]
 
         for i in [0, 1]:
             try:
@@ -554,7 +568,7 @@ class UrlSnarfer:
 
         return r;
 
-    def ping_url(self, url, response, update_count=True):
+    def ping_url(self, url, response, nsfw, update_count=True):
         if update_count:
             response.count += 1
             self.db.increment_count(response.id)
@@ -572,6 +586,10 @@ class UrlSnarfer:
                 response.type = type
             else:
                 type = response.type
+
+            if response.nsfw < nsfw:
+                response.nsfw = nsfw
+                self.db.set_url_nsfw(response.id, nsfw)
 
             if response.description == "" or response.description == None:
                 print "Updating description"
@@ -606,7 +624,7 @@ class UrlSnarfer:
             response = None
 
         if response is not None:
-            self.ping_url(url, response, update_count)
+            self.ping_url(url, response, nsfw, update_count)
             return response
 
         try:
@@ -836,8 +854,9 @@ if __name__ != '__main__':
                     return
 
                 desc = ""
-                if response.title:
-                    desc = '(' + response.title.replace("\n", "") + ')'
+                title = response.pretty_title()
+                if title:
+                    desc = '(' + title.replace("\n", "") + ')'
                 elif response.description:
                     desc = '(' + response.description.replace("\n", "") + ')'
                 if response.count > 1:
