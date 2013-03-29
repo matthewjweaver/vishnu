@@ -598,6 +598,7 @@ class UrlSnarfer:
                     self.db.set_url_desc(response.id, desc)
                     if self.clear_title(url):
                         self.db.clear_url_title(response.id)
+                    response.description = desc
             else:
                 print response.description
 
