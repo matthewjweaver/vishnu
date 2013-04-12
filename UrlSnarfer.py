@@ -88,8 +88,37 @@ class TwitterUrlHelper(UrlHelper):
             return desc
         return None
 
+class ReadabilityUrlHelper(UrlHelper):
+    def __init__(self):
+        UrlHelper.__init__(self)
+        self.clear_title = True
+        self.url_regex = re.compile("readability.com/articles/.*")
+
+    def match(self, url):
+        if self.url_regex.search(url):
+            return True
+        return False
+
+    def fetch(self, snarfer, url, resp):
+        url = re.sub("/#!", "", url)
+        url = re.sub("^https", "http", url)
+        resp = snarfer.open_url(url)
+        html = resp.read()
+        s = BeautifulSoup(html)
+
+        links = s.findAll("link")
+
+        for link in links:
+            if link['rel'] == 'canonical':
+                rUrl = link['href']
+                return rUrl
+
+        return None
+
 helpers.append(ImgUrUrlHelper())
 helpers.append(TwitterUrlHelper())
+helpers.append(ReadabilityUrlHelper())
+
 def find_url_helper(url):
     for helper in helpers:
         if helper.match(url) is True:
