@@ -165,6 +165,43 @@ class StockTicker:
 
         return response
 
+    #>>> pprint.pprint(mtgox.ticker())
+    #{u'avg': {u'display_short': u'$61.91', u'value_int': 6190703},
+    #u'buy': {u'display_short': u'$63.00', u'value_int': 6300100},
+    #u'high': {u'display_short': u'$66.00', u'value_int': 6600000},
+    #u'last': {u'display_short': u'$63.70', u'value_int': 6370003},
+    #u'last_all': {u'display_short': u'$63.70', u'value_int': 6370003},
+    #u'last_local': {u'display_short': u'$63.70', u'value_int': 6370003},
+    #u'last_orig': {u'display_short': u'$63.70', u'value_int': 6370003},
+    #u'low': {u'display_short': u'$57.70', u'value_int': 5770200},
+    #u'now': u'1363823793330687',
+    #u'sell': {u'display_short': u'$63.70', u'value_int': 6370003},
+    #u'vol': {u'display_short': u'92,207.23\xa0BTC', u'value_int': 9220723363798L},
+    #u'vwap': {u'display_short': u'$61.99', u'value_int': 6198618}}
+
+    def mtgox_ticker(self):
+        now = time.localtime(time.time())
+        open = int(time.mktime((now[0], now[1], now[2],
+                                0, 0, 0,
+                                now[6], now[7], now[8])))
+        res = mtgox._specific('trades?since=%d000000' % open, 'USD')
+        opening_price = res[0]['price_int']
+
+        ticker = mtgox.ticker()
+        current_value = ticker['last_all']['value_int']
+        change = current_value - opening_price
+        percentage = change / float(ticker['last_all']['value_int'])
+
+        sym = {
+            'n' : "MT.GOX",
+            'l1' : "%.02f" % (float(current_value) / 100000),
+            'c6' : "%+.02f" % (float(change) / 100000),
+            'p2' : "%+.02f%%" % (percentage * 100),
+            'btc' : ticker['vol']['display_short']
+        }
+        return sym
+
+
 if __name__ != '__main__':
     from PlayerPlugin import PlayerPlugin
     class StockTickerPlugin(PlayerPlugin, StockTicker):
@@ -177,42 +214,6 @@ if __name__ != '__main__':
             self.map("GeneralEvent")
             self.map("TalkEvent")
 
-        #>>> pprint.pprint(mtgox.ticker())
-        #{u'avg': {u'display_short': u'$61.91', u'value_int': 6190703},
-        #u'buy': {u'display_short': u'$63.00', u'value_int': 6300100},
-        #u'high': {u'display_short': u'$66.00', u'value_int': 6600000},
-        #u'last': {u'display_short': u'$63.70', u'value_int': 6370003},
-        #u'last_all': {u'display_short': u'$63.70', u'value_int': 6370003},
-        #u'last_local': {u'display_short': u'$63.70', u'value_int': 6370003},
-        #u'last_orig': {u'display_short': u'$63.70', u'value_int': 6370003},
-        #u'low': {u'display_short': u'$57.70', u'value_int': 5770200},
-        #u'now': u'1363823793330687',
-        #u'sell': {u'display_short': u'$63.70', u'value_int': 6370003},
-        #u'vol': {u'display_short': u'92,207.23\xa0BTC', u'value_int': 9220723363798L},
-        #u'vwap': {u'display_short': u'$61.99', u'value_int': 6198618}}
-
-        def mtgox_ticker(self):
-            now = time.localtime(time.time())
-            open = int(time.mktime((now[0], now[1], now[2],
-                                    0, 0, 0,
-                                    now[6], now[7], now[8])))
-            res = mtgox._specific('trades?since=%d000000' % open, 'USD')
-            opening_price = res[0]['price_int']
-
-            ticker = mtgox.ticker()
-            current_value = ticker['last_all']['value_int']
-            change = current_value - opening_price
-            percentage = change / float(ticker['last_all']['value_int'])
-
-            sym = {
-                'n' : "MT.GOX",
-                'l1' : "%.02f" % (float(current_value) / 100000),
-                'c6' : "%+.02f" % (float(change) / 100000),
-                'p2' : "%+.02f%%" % (percentage * 100),
-                'btc' : ticker['vol']['display_short']
-            }
-            return sym
-
         def react(self, event):
             msg = event.message
 
@@ -222,28 +223,31 @@ if __name__ != '__main__':
             if event.from_who == "vishnu":
                 return
 
-            m = re.match("ticker (\S+)", msg)
+            m = re.match("\s*ticker (\S+)", msg)
             if not m:
                 return
 
-            if m.group(1).upper() == "OHGOD":
-                sym = {
-                    'n' : "GoonSwarm",
-                    'l1' : "OH GOD BEES!",
-                    'c6' : "1",
-                    'p2' : '100%'
-                }
-            elif m.group(1).upper() == "XCOM":
-                sym = {
-                    'n' : "XCOM",
-                    'l1' : "XCOM",
-                    'c6' : "1",
-                    'p2' : "JOY/PAIN=100%?"
-                }
-            elif m.group(1).upper() == "MTGOX":
-                sym = self.mtgox_ticker()
-            else:
-                sym = self.get_sym(event, m.group(1))
+            try:
+                if m.group(1).upper() == "OHGOD":
+                    sym = {
+                        'n' : "GoonSwarm",
+                        'l1' : "OH GOD BEES!",
+                        'c6' : "1",
+                        'p2' : '100%'
+                    }
+                elif m.group(1).upper() == "XCOM":
+                    sym = {
+                        'n' : "XCOM",
+                        'l1' : "XCOM",
+                        'c6' : "1",
+                        'p2' : "JOY/PAIN=100%?"
+                    }
+                elif m.group(1).upper() == "MTGOX":
+                    sym = self.mtgox_ticker()
+                else:
+                    sym = self.get_sym(event, m.group(1))
+            except urllib2.URLError, e:
+                self.say(event, "\"%s\" error: %s" % (msg, str(e)))
 
             print m.group(1).upper()
             change = float(sym['c6'])
@@ -278,7 +282,10 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         sym = sys.argv[1]
 
-    resp = st.get_sym(None, sym)
+    if sym == "mtgox":
+        resp = st.mtgox_ticker()
+    else:
+        resp = st.get_sym(None, sym)
     print resp
     if resp['p2'] != "N/A":
         msg = "%s: " % (resp['n'])
