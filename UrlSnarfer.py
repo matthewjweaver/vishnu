@@ -34,7 +34,7 @@ class ImgUrUrlHelper(UrlHelper):
     def __init__(self):
         UrlHelper.__init__(self)
         self.clear_title = True
-        self.url_regex = re.compile("imgur.com/(\S+).(jpg|gif)")
+        self.url_regex = re.compile("imgur.com/(\S+)\....")
 
     def match(self, url):
         if self.url_regex.search(url):
