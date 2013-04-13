@@ -29,6 +29,10 @@ class UrlHelper(object):
         self.clear_title = False
     def match(self, url, type):
         return False
+    def fetch(self, snarfer, url, resp):
+        return {'url': None,
+                'title': None,
+                'description': None };
 
 class ImgUrUrlHelper(UrlHelper):
     def __init__(self):
@@ -49,7 +53,7 @@ class ImgUrUrlHelper(UrlHelper):
         title = snarfer.browser.title()
         if title is not None:
             title = " ".join(title.split())
-        return title
+        return {'description': title}
 
 class TwitterUrlHelper(UrlHelper):
     def __init__(self):
@@ -85,7 +89,7 @@ class TwitterUrlHelper(UrlHelper):
             name = p[0].contents[0]
         if text and name:
             desc = "%s: %s" % (str(name), text.strip()) 
-            return desc
+            return {'description': desc}
         return None
 
 class ReadabilityUrlHelper(UrlHelper):
@@ -110,8 +114,10 @@ class ReadabilityUrlHelper(UrlHelper):
 
         for link in links:
             if link['rel'] == 'canonical':
-                rUrl = link['href']
-                return rUrl
+                original = urllib2.urlopen(link['href']).read()
+                sO = BeautifulSoup(original)
+
+                return {'title': sO.title.string, 'url': link['href']}
 
         return None
 
@@ -555,7 +561,13 @@ class UrlSnarfer:
         h = find_url_helper(url)
         if h is not None:
             print "Using %s" % str(h)
-            return h.fetch(self, url, resp)
+
+            result = h.fetch(self, url, resp)
+    
+            if 'description' in result:
+                return result['description']
+            else:
+                return None
         if 'html' not in type:
             return None
 
@@ -578,6 +590,32 @@ class UrlSnarfer:
             print "EXCEPTION: %s" % str(e)
 
         return description
+
+    def get_url(self, url, resp):
+        h = find_url_helper(url)
+
+        if h is not None:
+            result = h.fetch(self, url, resp)
+    
+            if 'url' in result:
+                return result['url']
+            else:
+                return None
+
+        return None
+
+    def get_title(self, url, resp):
+        h = find_url_helper(url)
+
+        if h is not None:
+            result = h.fetch(self, url, resp)
+    
+            if 'title' in result:
+                return result['title']
+            else:
+                return None
+
+        return None
 
     def open_url(self, url):
         r = self.browser.open(url)
@@ -677,6 +715,24 @@ class UrlSnarfer:
 
         type = self.get_type()
         desc = self.get_description(url, r)
+        newUrl = self.get_url(url, r)
+        newTitle = self.get_title(url, r)
+
+        if newUrl is not None:
+            url = newUrl
+
+            # check if the unobfuscated url has already been recorded
+            try:
+                response = self.db.get_by_url(url)
+            except Exception, e:
+                response = None
+
+            if response is not None:
+                self.ping_url(url, response, nsfw, update_count)
+                return response
+
+        if newTitle is not None:
+            title = newTitle
 
         if self.clear_title(url):
             title = None
