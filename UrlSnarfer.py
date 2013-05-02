@@ -2,6 +2,7 @@
 import re
 import sys
 import time
+import string
 import mechanize
 import traceback
 import MySQLdb
@@ -121,11 +122,18 @@ class ReadabilityUrlHelper(UrlHelper):
 
         return None
 
-class BitlyUrlHelper(UrlHelper):
+class ShortUrlHelper(UrlHelper):
     def __init__(self):
         UrlHelper.__init__(self)
         self.clear_title = True
-        self.url_regex = re.compile("bit.ly/.*")
+
+        domains = [ "bit\.ly",   # Bitly
+                    "goo\.gl",   # Google
+                    "kck\.st",   # Kickstarter
+                    "sbn\.to"    # SBNation
+                  ];
+
+        self.url_regex = re.compile("(" + string.join(domains,"|") + ")/.*")
 
     def match(self, url):
         if self.url_regex.search(url):
@@ -147,7 +155,7 @@ class BitlyUrlHelper(UrlHelper):
 helpers.append(ImgUrUrlHelper())
 helpers.append(TwitterUrlHelper())
 helpers.append(ReadabilityUrlHelper())
-helpers.append(BitlyUrlHelper())
+helpers.append(ShortUrlHelper())
 
 def find_url_helper(url):
     for helper in helpers:
