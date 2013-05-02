@@ -2,6 +2,7 @@
 import re
 import sys
 import time
+import string
 import mechanize
 import traceback
 import MySQLdb
@@ -121,9 +122,40 @@ class ReadabilityUrlHelper(UrlHelper):
 
         return None
 
+class ShortUrlHelper(UrlHelper):
+    def __init__(self):
+        UrlHelper.__init__(self)
+        self.clear_title = True
+
+        domains = [ "bit\.ly",   # Bitly
+                    "goo\.gl",   # Google
+                    "kck\.st",   # Kickstarter
+                    "sbn\.to"    # SBNation
+                  ];
+
+        self.url_regex = re.compile("(" + string.join(domains,"|") + ")/.*")
+
+    def match(self, url):
+        if self.url_regex.search(url):
+            return True
+        return False
+
+    def fetch(self, snarfer, url, resp):
+        url = re.sub("/#!", "", url)
+        url = re.sub("^https", "http", url)
+
+        target = urllib2.urlopen(url)
+        targeturl = target.geturl()
+
+        sO = BeautifulSoup(target.read())
+
+        return {'title': sO.title.string, 'url': targeturl }
+
+
 helpers.append(ImgUrUrlHelper())
 helpers.append(TwitterUrlHelper())
 helpers.append(ReadabilityUrlHelper())
+helpers.append(ShortUrlHelper())
 
 def find_url_helper(url):
     for helper in helpers:
