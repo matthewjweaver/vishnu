@@ -596,7 +596,7 @@ class UrlSnarfer:
 
             result = h.fetch(self, url, resp)
     
-            if 'description' in result:
+            if result and 'description' in result:
                 return result['description']
             else:
                 return None
@@ -629,7 +629,7 @@ class UrlSnarfer:
         if h is not None:
             result = h.fetch(self, url, resp)
     
-            if 'url' in result:
+            if result and 'url' in result:
                 return result['url']
             else:
                 return None
@@ -642,7 +642,7 @@ class UrlSnarfer:
         if h is not None:
             result = h.fetch(self, url, resp)
     
-            if 'title' in result:
+            if result and 'title' in result:
                 return result['title']
             else:
                 return None
