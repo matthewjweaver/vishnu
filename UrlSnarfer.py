@@ -949,6 +949,7 @@ if __name__ != '__main__':
             PlayerPlugin.__init__(self)
             self.db = MysqlUrlDb(db_host, db_name, db_user, db_pass)
             UrlSnarfer.__init__(self, self.db)
+            self.parser = HTMLParser.HTMLParser()
 
         def die(self):
             self.db.close()
@@ -992,6 +993,7 @@ if __name__ != '__main__':
         def link(self, event, url, shorturl, description):
             self.say(event, shorturl)
             if description is not None and description != "":
+                description = self.parser.unescape(description)
                 self.say(event, description)
             event.socket.command(";#212:_fromVishnu(\"" + url + "\")")
 
