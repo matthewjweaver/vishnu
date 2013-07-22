@@ -41,6 +41,9 @@ class VishnuBrowser:
                 ('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.13+ (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2')
             ]
 #            self.set_debug_http(True)
+            self.set_proxies({'http' : 'proxy.ice-nine.org:3128',
+                              'https' : 'proxy.ice-nine.org:3128' })
+           
 
 if __name__ == '__main__':
     b = VishnuBrowser(config.cookiejar)
