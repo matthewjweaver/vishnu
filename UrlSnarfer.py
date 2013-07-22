@@ -70,6 +70,7 @@ class TwitterUrlHelper(UrlHelper):
     def fetch(self, snarfer, url, resp):
         url = re.sub("/#!", "", url)
         url = re.sub("^https", "http", url)
+        url = re.sub("/photo/.*", "", url)
         resp = snarfer.open_url(url)
         html = resp.read()
         s = BeautifulSoup(html)
