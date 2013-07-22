@@ -1013,10 +1013,14 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-u", "--update", action="store_true", default=False)
     parser.add_option("-n", "--count", action="store", default=10)
+    parser.add_option("-U", "--user", action="store", default=None)
 
     (options, urls) = parser.parse_args()
 
     user = getpass.getuser()
+    if options.user:
+        user = options.user
+
     db = MysqlUrlDb(db_host, db_name, db_user, db_pass)
     u = UrlSnarfer(db)
 
