@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 import time
 def timeAgo(then_tm, now_tm):
     ago = ""
