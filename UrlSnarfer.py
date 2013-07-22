@@ -19,7 +19,7 @@ import VishnuBrowser
 from config import *
 
 ipAddressRegex = re.compile(r"^((((([0-9]{1,3})\.){3})([0-9]{1,3}))((\/[^\s]+)|))$")
-urlRegex = re.compile(r"\s*(([\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
+urlRegex = re.compile(r"\s*(([\|\$\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
 selfRefRegex = re.compile(r"http://(www.|)ice-nine.org/(l|link.php)/([A-Za-z0-9]+)")
 httpUrlRegex = re.compile(r"(https?://[^\]>\s]+)", re.I)
 googleRegex = re.compile(r"^(\w*\s*\|\s*|)@google (.*)", re.I)
@@ -508,10 +508,12 @@ class UrlSnarfer:
         private = False
         nsfw = 0
         if mods:
+            if '$' in mods:
+                nsfw |= 4
             if '!' in mods:
-                nsfw = 2
-            if '~' in mods:
-                nsfw = 1
+                nsfw |= 2
+            elif '~' in mods:
+                nsfw |= 1
             if '^' in mods:
                 private = True
 
@@ -687,9 +689,16 @@ class UrlSnarfer:
             else:
                 type = response.type
 
-            if response.nsfw < nsfw:
-                response.nsfw = nsfw
-                self.db.set_url_nsfw(response.id, nsfw)
+            new_nsfw = response.nsfw
+            if (nsfw & 2) and (response.nsfw & 1):
+                new_nsfw |= 2
+                new_nsfw &= ~1
+
+            new_nsfw |= (nsfw & ~3)
+
+            if response.nsfw != new_nsfw:
+                response.nsfw = new_nsfw
+                self.db.set_url_nsfw(response.id, new_nsfw)
 
             if response.description == "" or response.description == None:
                 print "Updating description"
@@ -923,14 +932,16 @@ class UrlSnarferResponse:
         else:
             title += ""
         if self.nsfw > 0 or self.private:
-            title += "("
+            title += " ("
             
-            if self.nsfw == 2:
+            if self.nsfw & 2:
                 title += "NSFW"
-            elif self.nsfw == 1:
+            elif self.nsfw & 1:
                 title += "~NSFW"
-            elif self.nsfw != 0:
-                title += "?NSFW"
+            if self.nsfw & 4:
+                if self.nsfw != 4:
+                    title += ","
+                title += "SPOILERS"
 
             if self.private:
                 if self.nsfw > 0:
