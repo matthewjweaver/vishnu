@@ -152,11 +152,49 @@ class ShortUrlHelper(UrlHelper):
 
         return {'title': sO.title.string, 'url': targeturl }
 
+class YoutubeUrlHelper(UrlHelper):
+    def __init__(self):
+        UrlHelper.__init__(self)
+        self.clear_title = False
+
+        domains = [ "youtube\.com",
+                    "youtu\.be"
+                  ];
+
+        self.url_regex = re.compile("(" + string.join(domains,"|") + ")/.*")
+
+    def match(self, url):
+        if self.url_regex.search(url):
+            return True
+        return False
+
+    def fetch(self, snarfer, url, resp):
+        from urlparse import urlparse, parse_qs
+
+        targetUrl = url
+
+        pURL = urlparse(url)
+        q = parse_qs(pURL.query)
+
+        if 'youtu.be' in pURL.netloc:
+            targetUrl = "http://youtube.com/watch?v=" + pURL.path[1:]
+        elif 'v' in q:
+            targetUrl = "http://youtube.com/watch?v=" + str(q['v'][0])
+        else:
+            targetUrl = url
+            targetUrl = re.sub("^https", "http", url)
+
+        target = urllib2.urlopen(targetUrl)
+
+        sO = BeautifulSoup(target.read())
+
+        return {'title': sO.title.string, 'url': targetUrl }
 
 helpers.append(ImgUrUrlHelper())
 helpers.append(TwitterUrlHelper())
 helpers.append(ReadabilityUrlHelper())
 helpers.append(ShortUrlHelper())
+helpers.append(YoutubeUrlHelper())
 
 def find_url_helper(url):
     for helper in helpers:
