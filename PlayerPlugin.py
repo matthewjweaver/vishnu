@@ -13,12 +13,12 @@ class PlayerPlugin(MorpheusPlugin):
     def private(self, event, text):
         event.socket.command("~%s %s " % (event.from_who, text))
 
-    def social(self, event, social, target=None, with=None):
+    def social(self, event, social, target=None, _with=None):
         if not target:
             target = event.from_who
         text = "%s %s" % (social, target)
-        if with:
-            text += " with %s" % with
+        if _with:
+            text += " with %s" % _with
 
         event.socket.command(text)
 

@@ -19,7 +19,7 @@ import VishnuBrowser
 from config import *
 
 ipAddressRegex = re.compile(r"^((((([0-9]{1,3})\.){3})([0-9]{1,3}))((\/[^\s]+)|))$")
-urlRegex = re.compile(r"\s*(([\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
+urlRegex = re.compile(r"\s*(([\|\$\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
 selfRefRegex = re.compile(r"http://(www.|)ice-nine.org/(l|link.php)/([A-Za-z0-9]+)")
 httpUrlRegex = re.compile(r"(https?://[^\]>\s]+)", re.I)
 googleRegex = re.compile(r"^(\w*\s*\|\s*|)@google (.*)", re.I)
@@ -70,6 +70,7 @@ class TwitterUrlHelper(UrlHelper):
     def fetch(self, snarfer, url, resp):
         url = re.sub("/#!", "", url)
         url = re.sub("^https", "http", url)
+        url = re.sub("/photo/.*", "", url)
         resp = snarfer.open_url(url)
         html = resp.read()
         s = BeautifulSoup(html)
@@ -545,10 +546,12 @@ class UrlSnarfer:
         private = False
         nsfw = 0
         if mods:
+            if '$' in mods:
+                nsfw |= 4
             if '!' in mods:
-                nsfw = 2
-            if '~' in mods:
-                nsfw = 1
+                nsfw |= 2
+            elif '~' in mods:
+                nsfw |= 1
             if '^' in mods:
                 private = True
 
@@ -634,7 +637,7 @@ class UrlSnarfer:
 
             result = h.fetch(self, url, resp)
     
-            if 'description' in result:
+            if result and 'description' in result:
                 return result['description']
             else:
                 return None
@@ -667,7 +670,7 @@ class UrlSnarfer:
         if h is not None:
             result = h.fetch(self, url, resp)
     
-            if 'url' in result:
+            if result and 'url' in result:
                 return result['url']
             else:
                 return None
@@ -680,7 +683,7 @@ class UrlSnarfer:
         if h is not None:
             result = h.fetch(self, url, resp)
     
-            if 'title' in result:
+            if result and 'title' in result:
                 return result['title']
             else:
                 return None
@@ -724,9 +727,16 @@ class UrlSnarfer:
             else:
                 type = response.type
 
-            if response.nsfw < nsfw:
-                response.nsfw = nsfw
-                self.db.set_url_nsfw(response.id, nsfw)
+            new_nsfw = response.nsfw
+            if (nsfw & 2) and (response.nsfw & 1):
+                new_nsfw |= 2
+                new_nsfw &= ~1
+
+            new_nsfw |= (nsfw & ~3)
+
+            if response.nsfw != new_nsfw:
+                response.nsfw = new_nsfw
+                self.db.set_url_nsfw(response.id, new_nsfw)
 
             if response.description == "" or response.description == None:
                 print "Updating description"
@@ -960,14 +970,16 @@ class UrlSnarferResponse:
         else:
             title += ""
         if self.nsfw > 0 or self.private:
-            title += "("
+            title += " ("
             
-            if self.nsfw == 2:
+            if self.nsfw & 2:
                 title += "NSFW"
-            elif self.nsfw == 1:
+            elif self.nsfw & 1:
                 title += "~NSFW"
-            elif self.nsfw != 0:
-                title += "?NSFW"
+            if self.nsfw & 4:
+                if self.nsfw != 4:
+                    title += ","
+                title += "SPOILERS"
 
             if self.private:
                 if self.nsfw > 0:
@@ -987,6 +999,7 @@ if __name__ != '__main__':
             PlayerPlugin.__init__(self)
             self.db = MysqlUrlDb(db_host, db_name, db_user, db_pass)
             UrlSnarfer.__init__(self, self.db)
+            self.parser = HTMLParser.HTMLParser()
 
         def die(self):
             self.db.close()
@@ -1030,6 +1043,7 @@ if __name__ != '__main__':
         def link(self, event, url, shorturl, description):
             self.say(event, shorturl)
             if description is not None and description != "":
+                description = self.parser.unescape(description)
                 self.say(event, description)
             event.socket.command(";#212:_fromVishnu(\"" + url + "\")")
 
@@ -1037,10 +1051,14 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-u", "--update", action="store_true", default=False)
     parser.add_option("-n", "--count", action="store", default=10)
+    parser.add_option("-U", "--user", action="store", default=None)
 
     (options, urls) = parser.parse_args()
 
     user = getpass.getuser()
+    if options.user:
+        user = options.user
+
     db = MysqlUrlDb(db_host, db_name, db_user, db_pass)
     u = UrlSnarfer(db)
 

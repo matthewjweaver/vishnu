@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 import re
 import datetime
 import time
@@ -46,7 +46,7 @@ class Contextualize(MorpheusPlugin):
         to_who = ''
 
         def __init__(self, event=None, message='', from_who='', from_who_objid=-1, to_who=''):
-            super(MorpheusEvent, self).__init__(event)
+            MorpheusEvent.__init__(self, event)
             if isinstance(event, MorpheusNetwork.SocketEvent):
                 self.socket = event.socket
             self.from_who = from_who
