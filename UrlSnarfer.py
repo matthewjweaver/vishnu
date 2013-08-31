@@ -699,7 +699,7 @@ class UrlSnarfer:
             result = h.fetch(self, url, resp)
     
             if result and 'title' in result:
-                return result['title']
+                return result['title'].strip()
             else:
                 return None
 
