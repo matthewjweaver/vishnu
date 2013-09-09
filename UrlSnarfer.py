@@ -174,12 +174,25 @@ class YoutubeUrlHelper(UrlHelper):
         targetUrl = url
 
         pURL = urlparse(url)
-        q = parse_qs(pURL.query)
+        query = parse_qs(pURL.query)
+
+        params = ""
+        titleCharms = ""
+
+        if 't' in query:
+            params += "&t=" + str(query['t'][0])
+            titleCharms += " [timecode]"
+
+        if 'list' in query:
+            params += "&list=" + str(query['list'][0]) 
+            titleCharms += " [playlist]"
 
         if 'youtu.be' in pURL.netloc:
             targetUrl = "http://youtube.com/watch?v=" + pURL.path[1:]
-        elif 'v' in q:
-            targetUrl = "http://youtube.com/watch?v=" + str(q['v'][0])
+            targetUrl += params
+        elif 'v' in query:
+            targetUrl = "http://youtube.com/watch?v=" + str(query['v'][0])
+            targetUrl += params
         else:
             targetUrl = url
             targetUrl = re.sub("^https", "http", url)
@@ -188,7 +201,9 @@ class YoutubeUrlHelper(UrlHelper):
 
         sO = BeautifulSoup(target.read())
 
-        return {'title': sO.title.string, 'url': targetUrl }
+        title = sO.title.string + titleCharms
+
+        return {'title': title, 'url': targetUrl }
 
 helpers.append(ImgUrUrlHelper())
 helpers.append(TwitterUrlHelper())
@@ -684,7 +699,7 @@ class UrlSnarfer:
             result = h.fetch(self, url, resp)
     
             if result and 'title' in result:
-                return result['title']
+                return result['title'].strip()
             else:
                 return None
 
