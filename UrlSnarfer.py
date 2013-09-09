@@ -1059,6 +1059,7 @@ if __name__ != '__main__':
             self.say(event, shorturl)
             if description is not None and description != "":
                 description = self.parser.unescape(description)
+                description = re.sub(r"\n+", "  ", description)
                 self.say(event, description)
             event.socket.command(";#212:_fromVishnu(\"" + url + "\")")
 
