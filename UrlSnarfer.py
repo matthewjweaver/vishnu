@@ -570,7 +570,6 @@ class UrlSnarfer:
             if '^' in mods:
                 private = True
 
-
         # URL without a protocol:// prefix
         if not httpUrlRegex.search(url):
             interpolated = True
@@ -743,7 +742,9 @@ class UrlSnarfer:
                 type = response.type
 
             new_nsfw = response.nsfw
-            if (nsfw & 2) and (response.nsfw & 1):
+            if response.nsfw == 0:
+                new_nsfw |= nsfw
+            elif (response.nsfw & 3) == 1 and (nsfw & 2):
                 new_nsfw |= 2
                 new_nsfw &= ~1
 
@@ -754,7 +755,6 @@ class UrlSnarfer:
                 self.db.set_url_nsfw(response.id, new_nsfw)
 
             if response.description == "" or response.description == None:
-                print "Updating description"
                 desc = self.get_description(url, r)
                 if desc:
                     self.db.set_url_desc(response.id, desc)
