@@ -54,7 +54,10 @@ class ImgUrUrlHelper(UrlHelper):
         title = snarfer.browser.title()
         if title is not None:
             title = " ".join(title.split())
-        return {'description': title}
+
+        print "returning %s" % url
+        return {'description': title,
+                'url' : url }
 
 class TwitterUrlHelper(UrlHelper):
     def __init__(self):
