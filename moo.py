@@ -7,6 +7,7 @@ import sgmllib
 import UrlSnarfer
 from UrlSnarfer import *
 from StockTicker import StockTickerPlugin
+from ButterflyLabs import ButterflyLabsPlugin
 
 from morpheus import *
 from config import *
