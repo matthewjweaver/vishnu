@@ -34,10 +34,15 @@ class MLBTicker:
                         'name' : team['team_full'],
                         'l10' : team['last_ten'],
                         'division' : team['division'],
+                        'gb' : team['gb'],
+                        'gb_wildcard' : team['gb_wildcard'],
                     }
 
     def get_ticker(self, name):
         st = self.get_standings(name)
+
+        if not st:
+            return "%s: No such team abbreviation" % name
 
         if float(st['pct']) > 0.5:
             color = '\\\\g'
@@ -45,6 +50,9 @@ class MLBTicker:
             color = '\\\\r'
 
         place = st['place']
+        gb = None
+        if int(place) != 1:
+            gb = st['gb']
         if place == "1":
             place = "1st"
         elif place == "2":
@@ -58,9 +66,14 @@ class MLBTicker:
         division = division.replace("American League", "AL")
         division = division.replace("National League", "NL")
 
-        return "%s%s: %s, %s %s (L10: %s Streak: %s)" % \
+        ret = "%s%s: %s, %s %s (L10: %s Streak: %s" % \
                (color, st['name'], st['record'], place, division, \
                 st['l10'], st['streak'])
+        if gb:
+            ret += " %s/%s GB" % (gb, st['gb_wildcard'])
+        ret += ")"
+
+        return ret
 
 
 
