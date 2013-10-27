@@ -112,7 +112,7 @@ class StockTicker:
     def __init__(self):
         self.browser = VishnuBrowser.VishnuBrowser()
     
-    def get_sym(self, event, sym, attrs=defattrs):
+    def get_sym(self, sym, attrs=defattrs):
         attrmap = []
         short = True
 
@@ -134,15 +134,8 @@ class StockTicker:
                     attr = re.sub(m.group(1), "", attr)
 
         opts = urllib.urlencode( { 's' : sym, 'f' : 's' + attrs } )
-        try:
-            f = self.browser.open(self.baseurl + "?" + opts)
-        except mechanize.BrowserStateError, e:
-            self.say(event, "Error: %s" % str(e))
-        except urllib2.URLError, e:
-            self.say(event, "Error: %s" % str(e))
-
+        f = self.browser.open(self.baseurl + "?" + opts)
         reader = csv.reader(f)
-
         response = {}
 
         try:
@@ -158,12 +151,55 @@ class StockTicker:
                     i += 1
 
                 response['array'] = row[1:]
-
-                
         except csv.Error, e:
             raise
 
         return response
+
+    def get_ticker(self, symbol):
+        symbol = symbol.upper()
+        if symbol == "OHGOD":
+            sym = {
+                'n' : "GoonSwarm",
+                'l1' : "OH GOD BEES!",
+                'c6' : "1",
+                'p2' : '100%'
+            }
+        elif symbol == "XCOM":
+            sym = {
+                'n' : "XCOM",
+                'l1' : "XCOM",
+                'c6' : "1",
+                'p2' : "JOY/PAIN=100%?"
+            }
+        elif symbol == "MTGOX":
+            sym = self.mtgox_ticker()
+        else:
+            sym = self.get_sym(symbol)
+
+        change = float(sym['c6'])
+        color = ""
+
+        if change == 0:
+            color = ""
+        elif change > 0:
+            color = "\\\\g"
+        else:
+            color = "\\\\r"
+
+        if sym['p2'] == "N/A":
+            return None
+        msg = "%s%s: " % (color, sym['n'])
+        msg += "%s (%s %s" % (sym['l1'], sym['c6'], sym['p2'])
+        if 'r' in sym and sym['r'] != "N/A":
+            msg += " P/E %s" % sym['r']
+        if 'j1' in sym and sym['j1'] != "N/A":
+            msg += " Cap %s" % sym['j1']
+        if 'btc' in sym:
+            msg += " Volume %s" % sym['btc']
+        msg += ")"
+
+        return msg
 
     #>>> pprint.pprint(mtgox.ticker())
     #{u'avg': {u'display_short': u'$61.91', u'value_int': 6190703},
@@ -201,7 +237,6 @@ class StockTicker:
         }
         return sym
 
-
 if __name__ != '__main__':
     from PlayerPlugin import PlayerPlugin
     class StockTickerPlugin(PlayerPlugin, StockTicker):
@@ -228,75 +263,28 @@ if __name__ != '__main__':
                 return
 
             try:
-                if m.group(1).upper() == "OHGOD":
-                    sym = {
-                        'n' : "GoonSwarm",
-                        'l1' : "OH GOD BEES!",
-                        'c6' : "1",
-                        'p2' : '100%'
-                    }
-                elif m.group(1).upper() == "XCOM":
-                    sym = {
-                        'n' : "XCOM",
-                        'l1' : "XCOM",
-                        'c6' : "1",
-                        'p2' : "JOY/PAIN=100%?"
-                    }
-                elif m.group(1).upper() == "MTGOX":
-                    sym = self.mtgox_ticker()
-                else:
-                    sym = self.get_sym(event, m.group(1))
+                msg = self.get_ticker(m.group(1))
             except urllib2.URLError, e:
                 self.say(event, "\"%s\" error: %s" % (msg, str(e)))
+            except mechanize.BrowserStateError, e:
+                self.say(event, "Error: %s" % str(e))
+            except Exception, e:
+                self.say(event, "Exception: %s" % str(e))
 
-            print m.group(1).upper()
-            change = float(sym['c6'])
-            color = ""
-
-            if change == 0:
-                color = ""
-            elif change > 0:
-                color = "\\\\g"
-            else:
-                color = "\\\\r"
-
-            if sym['p2'] != "N/A":
-                msg = "%s%s: " % (color, sym['n'])
-                msg += "%s (%s %s" % (sym['l1'], sym['c6'], sym['p2'])
-                if 'r' in sym and sym['r'] != "N/A":
-                    msg += " P/E %s" % sym['r']
-                if 'j1' in sym and sym['j1'] != "N/A":
-                    msg += " Cap %s" % sym['j1']
-                if 'btc' in sym:
-                    msg += " Volume %s" % sym['btc']
-                msg += ")"
+            if msg:
                 self.say(event, msg)
             else:
-                self.social(event, "moon", event.from_who, "Invalid symbol %s" % sym['n'])
-
+                self.social(event, "moon", event.from_who, \
+                            "Invalid symbol %s" % m.group(1))
 
 if __name__ == '__main__':
     st = StockTicker()
 
-    sym = 'FB'
+    args = [ 'FB' ]
     if len(sys.argv) > 1:
-        sym = sys.argv[1]
+        args = sys.argv[1:]
 
-    if sym == "mtgox":
-        resp = st.mtgox_ticker()
-    else:
-        resp = st.get_sym(None, sym)
-    print resp
-    if resp['p2'] != "N/A":
-        msg = "%s: " % (resp['n'])
-        msg += "%s (%s %s" % (resp['l1'], resp['c6'], resp['p2'])
-        if 'r' in resp and resp['r'] != "N/A":
-            msg += " P/E %s" % resp['r']
-        if 'j1' in resp and resp['j1'] != "N/A":
-            msg += " Cap %s" % resp['j1']
-        msg += ")"
-        print msg
-    else:
-        print "Invalid symbol %s" % sym
+    for sym in args:
+        print st.get_ticker(sym)
 
 # vim: ts=4 sw=4 et
