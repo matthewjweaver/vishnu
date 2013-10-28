@@ -6,6 +6,7 @@ import mechanize
 import re
 import sys
 import urllib2
+from urllib import urlencode
 
 
 class GoogleCalculator:
@@ -14,7 +15,7 @@ class GoogleCalculator:
         self.browser = VishnuBrowser.VishnuBrowser()
 
     def solve(self, expression):
-        terms = urllib2.urlencode({"hl": "en", "q": expression})
+        terms = urlencode({"hl": "en", "q": expression})
         f = self.browser.open(self.url % terms)
         result = f.read()
         parsed_result = {}
