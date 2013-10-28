@@ -48,19 +48,23 @@ if __name__ != '__main__':
             if event.__class__.__name__ == "GeneralEvent":
                 msg = re.sub("^[^\|]+\|\s+", "", msg)
 
-            if event.to_who == 'vishnu' and msg == "calc":
-                try:
-                    self.solve(msg)
-                except urllib2.URLError, e:
-                    self.say(event, "\"%s\" error: %s" % (msg, str(e)))
-                except mechanize.BrowserStateError, e:
-                    self.say(event, "Error: %s" % str(e))
-                except Exception, e:
-                    self.say(event, "Exception: %s" % str(e))
-            if msg:
-                self.say(event, msg)
-            else:
-                self.social(event, "moon", event.from_who, "Couldn't compute %s" % msg)
+
+            if event.to_who == 'vishnu':
+                m = re.match("calc\s+(.*)", msg)
+                if m:
+                    result = None
+                    try:
+                        result = self.solve(m.group(1))
+                    except urllib2.URLError, e:
+                        self.say(event, "\"%s\" error: %s" % (msg, str(e)))
+                    except mechanize.BrowserStateError, e:
+                        self.say(event, "Error: %s" % str(e))
+                    except Exception, e:
+                        self.say(event, "Exception: %s" % str(e))
+                    if result:
+                        self.say(event, result)
+                    else:
+                        self.social(event, "moon", event.from_who, "Couldn't compute %s" % msg)
 
 if __name__ == '__main__':
     gcalc = GoogleCalculator() 
