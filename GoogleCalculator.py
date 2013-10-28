@@ -2,18 +2,20 @@
 # vim: ts=4 sw=4 et
 
 import VishnuBrowser
-from urllib import urlencode
+import mechanize
+import re
 import sys
+import urllib2
 
-url = r"https://www.google.com/ig/calculator?%s"
 
 class GoogleCalculator:
-    def __init__(self, browser):
-        self.browser = browser
+    url = r"https://www.google.com/ig/calculator?%s"
+    def __init__(self):
+        self.browser = VishnuBrowser.VishnuBrowser()
 
     def solve(self, expression):
-        terms = urlencode({"hl": "en", "q": expression})
-        f = self.browser.open(url % terms)
+        terms = urllib2.urlencode({"hl": "en", "q": expression})
+        f = self.browser.open(self.url % terms)
         result = f.read()
         parsed_result = {}
         # Google doesn't return valid JSON (THANKS OBAMA); they don't quote the keys.
@@ -29,9 +31,37 @@ class GoogleCalculator:
 
         return parsed_result["lhs"] + " = " + parsed_result["rhs"]
 
-if __name__ == '__main__':
-    browser = VishnuBrowser.VishnuBrowser()
-    gcalc = GoogleCalculator(browser)
+if __name__ != '__main__':
+    from PlayerPlugin import PlayerPlugin
+    class GoogleCalculatorPlugin(PlayerPlugin, GoogleCalculator):
+        def __init__(self):
+            PlayerPlugin.__init__(self)
+            GoogleCalculator.__init__(self)
 
+        def start(self):
+            self.map("StageTalkEvent")
+
+        def react(self, event):
+            msg = event.message
+
+            if event.__class__.__name__ == "GeneralEvent":
+                msg = re.sub("^[^\|]+\|\s+", "", msg)
+
+            if event.to_who == 'vishnu' and msg == "calc":
+                try:
+                    self.solve(msg)
+                except urllib2.URLError, e:
+                    self.say(event, "\"%s\" error: %s" % (msg, str(e)))
+                except mechanize.BrowserStateError, e:
+                    self.say(event, "Error: %s" % str(e))
+                except Exception, e:
+                    self.say(event, "Exception: %s" % str(e))
+            if msg:
+                self.say(event, msg)
+            else:
+                self.social(event, "moon", event.from_who, "Couldn't compute %s" % msg)
+
+if __name__ == '__main__':
+    gcalc = GoogleCalculator() 
     for expression in sys.argv[1:]:
         print gcalc.solve(expression)
