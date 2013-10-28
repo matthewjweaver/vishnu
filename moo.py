@@ -8,6 +8,7 @@ import UrlSnarfer
 from UrlSnarfer import *
 from StockTicker import StockTickerPlugin
 from ButterflyLabs import ButterflyLabsPlugin
+from GoogleCalculator import GoogleCalculatorPlugin
 
 from morpheus import *
 from config import *
