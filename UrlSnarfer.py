@@ -9,7 +9,7 @@ import MySQLdb
 import getpass
 import urllib2
 from urllib import urlencode
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 import gzip
 from optparse import OptionParser
 import HTMLParser

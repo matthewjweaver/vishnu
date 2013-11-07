@@ -4,7 +4,7 @@ import re
 import mechanize
 import VishnuBrowser
 import urllib2
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 
 class ButterflyLabs:
     url = "https://forums.butterflylabs.com/blogs/bfl_jody/"
