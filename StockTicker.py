@@ -10,6 +10,7 @@ from urllib import *
 import urllib2
 import mtgox
 import MLBTicker
+import NFLTicker
 
 import VishnuBrowser
 
@@ -113,6 +114,7 @@ class StockTicker:
     def __init__(self):
         self.browser = VishnuBrowser.VishnuBrowser()
         self.mlb = MLBTicker.MLBTicker(self.browser)
+        self.nfl = NFLTicker.NFLTicker(self.browser)
     
     def get_sym(self, sym, attrs=defattrs):
         attrmap = []
@@ -180,6 +182,10 @@ class StockTicker:
             return self.mlb.get_ticker(symbol[4:])
         elif symbol == "SOX":
             return self.mlb.get_ticker("BOS")
+        elif symbol[0:4] == "NFL.":
+            return self.nfl.get_ticker(symbol[4:])
+        elif symbol == "PATS":
+            return self.nfl.get_ticker("NE")
         else:
             sym = self.get_sym(symbol)
 
