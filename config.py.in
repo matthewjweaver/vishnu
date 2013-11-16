@@ -19,6 +19,10 @@ LAMBDA_PLAYER = """
 VISHNU = None
 DB = None
 
+wikiloginpage = "https://wiki.dosburros.com/index.php?title=Special:UserLogin"
+wikiuser = "Vishnu"
+wikipass = "wikipass"
+
 db_host = "db_host"
 db_name = "db_name"
 db_user = "db_user"

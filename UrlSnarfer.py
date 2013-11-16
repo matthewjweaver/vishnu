@@ -4,6 +4,7 @@ import sys
 import time
 import string
 import mechanize
+import config
 import traceback
 import MySQLdb
 import getpass
@@ -13,7 +14,6 @@ from bs4 import BeautifulSoup
 import gzip
 from optparse import OptionParser
 import HTMLParser
-
 
 import VishnuBrowser
 from config import *
@@ -34,6 +34,40 @@ class UrlHelper(object):
         return {'url': None,
                 'title': None,
                 'description': None };
+
+class BurrowikiUrlHelper(UrlHelper):
+    def __init__(self):
+        UrlHelper.__init__(self)
+        self.clear_title = True
+        self.url_regex = re.compile("wiki.dosburros.com/.*")
+
+    def match(self, url):
+        if self.url_regex.search(url):
+            return True
+        return False
+
+    def fetch(self, snarfer, url, resp):
+        br = mechanize.Browser()
+
+        cj = mechanize.MozillaCookieJar()
+        cj.load(config.cookiejar)
+        br.set_cookiejar(cj)
+
+        br.open(url)
+
+        if( br.title().find("ogin required") != -1 ):
+            print "Logging into Burrowiki"
+            br.open(config.wikiloginpage)
+            br.select_form(name="userlogin")
+            br["wpName"] = config.wikiuser
+            br["wpPassword"] = config.wikipass
+            br.find_control("wpRemember").items[0].selected=True
+            br.submit()
+            br.open(url)
+            cj.save(config.cookiejar)
+
+        return {'description': br.title(),
+                'url' : url }
 
 class ImgUrUrlHelper(UrlHelper):
     def __init__(self):
@@ -209,6 +243,7 @@ class YoutubeUrlHelper(UrlHelper):
         return {'title': title, 'url': targetUrl }
 
 helpers.append(ImgUrUrlHelper())
+helpers.append(BurrowikiUrlHelper())
 helpers.append(TwitterUrlHelper())
 helpers.append(ReadabilityUrlHelper())
 helpers.append(ShortUrlHelper())
