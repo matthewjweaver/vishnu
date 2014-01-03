@@ -11,6 +11,8 @@ import urllib2
 import mtgox
 import MLBTicker
 import NFLTicker
+from campbx import CampBX
+import simplejson as json
 
 import VishnuBrowser
 
@@ -115,6 +117,10 @@ class StockTicker:
         self.browser = VishnuBrowser.VishnuBrowser()
         self.mlb = MLBTicker.MLBTicker(self.browser)
         self.nfl = NFLTicker.NFLTicker(self.browser)
+
+        # Rate limit to once every 15 mins
+        self.last_cbxusd_market_query_ts = 0
+        self.last_cbxusd_market_query = None
     
     def get_sym(self, sym, attrs=defattrs):
         attrmap = []
@@ -178,6 +184,8 @@ class StockTicker:
             }
         elif symbol == "MTGOX":
             sym = self.mtgox_ticker()
+        elif symbol == "CAMPBX":
+            sym = self.campbx_ticker()
         elif symbol[0:4] == "MLB.":
             return self.mlb.get_ticker(symbol[4:])
         elif symbol == "SOX":
@@ -248,6 +256,50 @@ class StockTicker:
             'btc' : ticker['vol']['display_short']
         }
         return sym
+
+    campbx_market = "markets.json"
+    def campbx_ticker(self):
+        c = CampBX()
+
+        t = c.xticker()
+
+        now = time.localtime(time.time())
+        open = int(time.mktime((now[0], now[1], now[2],
+                                0, 0, 0,
+                                now[6], now[7], now[8])))
+
+        url = "http://api.bitcoincharts.com/v1/trades.csv?symbol=cbxUSD&start=%d" % open
+        r = self.browser.open(url)
+        opening_price = float(r.readlines()[0].split(',')[1])
+        current_value = float(t['Last Trade'])
+
+        change = current_value - opening_price
+        percentage = change / current_value
+
+        if self.last_cbxusd_market_query is None or \
+           now - self.last_cbxusd_market_query_ts > 15*60*60:
+            url = "http://api.bitcoincharts.com/v1/markets.json"
+            r = self.browser.open(url)
+            js = json.loads(r.read())
+            for market in js:
+                if market['symbol'].upper() == 'CBXUSD':
+                    self.last_cbxusd_market_query = market
+                    self.last_cbxusd_market_query_ts = now
+                    break
+
+        volume = "(unknown)"
+        if self.last_cbxusd_market_query is not None:
+            volume = "%s BTC" % self.last_cbxusd_market_query['volume']
+        
+        sym = {
+            'n' : 'CAMPBX',
+            'l1' : "%.02f" % current_value,
+            'c6' : "%+.02f" % change,
+            'p2' : "%+.02f%%" % (percentage * 100),
+            'btc' : volume,
+        }
+        return sym
+
 
 if __name__ != '__main__':
     from PlayerPlugin import PlayerPlugin
