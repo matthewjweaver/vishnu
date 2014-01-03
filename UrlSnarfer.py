@@ -117,7 +117,7 @@ class TwitterUrlHelper(UrlHelper):
             for part in p[0].contents:
                 if text is None:
                     text = ""
-                text += str(part)
+                text += unicode(part)
             text = re.sub(r'<[^>]*?>', '', text)
 
         #print html
@@ -127,7 +127,7 @@ class TwitterUrlHelper(UrlHelper):
         if p:
             name = p[0].contents[0]
         if text and name:
-            desc = "%s: %s" % (str(name), text.strip()) 
+            desc = "%s: %s" % (unicode(name), text.strip()) 
             return {'description': desc}
         return None
 
