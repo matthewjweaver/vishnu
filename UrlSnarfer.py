@@ -149,16 +149,7 @@ class ReadabilityUrlHelper(UrlHelper):
         html = resp.read()
         s = BeautifulSoup(html)
 
-        links = s.findAll("link")
-
-        for link in links:
-            if link['rel'] == 'canonical':
-                original = urllib2.urlopen(link['href']).read()
-                sO = BeautifulSoup(original)
-
-                return {'title': sO.title.string, 'url': link['href']}
-
-        return None
+        return {'title': s.title.string, 'url': resp.geturl() }
 
 class ShortUrlHelper(UrlHelper):
     def __init__(self):
@@ -1144,7 +1135,7 @@ if __name__ == '__main__':
         print "Trying " + arg
         try:
             response = u.snarf(arg, user, False)
-            print response
+            print response.title
         except Exception, e:
             print e
 
