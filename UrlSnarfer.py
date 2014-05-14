@@ -19,7 +19,7 @@ import VishnuBrowser
 from config import *
 
 ipAddressRegex = re.compile(r"^((((([0-9]{1,3})\.){3})([0-9]{1,3}))((\/[^\s]+)|))$")
-urlRegex = re.compile(r"\s*(([\|\$\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
+urlRegex = re.compile(r"(^|\s+)(([\|\$\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
 selfRefRegex = re.compile(r"http://(www.|)ice-nine.org/(l|link.php)/([A-Za-z0-9]+)")
 httpUrlRegex = re.compile(r"(https?://[^\]>\s]+)", re.I)
 googleRegex = re.compile(r"^(\w*\s*\|\s*|)@google (.*)", re.I)
@@ -593,8 +593,8 @@ class UrlSnarfer:
         if match is None:
             return None
 
-        url = match.group(3)
-        mods = match.group(1)
+        url = match.group(4)
+        mods = match.group(2)
 
         private = False
         nsfw = 0
