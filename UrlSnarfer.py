@@ -392,6 +392,22 @@ class MysqlUrlDb(UrlDB):
             else:
                 break
 
+    def set_url_title(self, urlno, title):
+        query = """UPDATE url SET title = %s WHERE id = %s"""
+
+        args = [title, urlno]
+
+        for i in [0, 1]:
+            try:
+                db = self.sqlDb
+                cursor = db.cursor()
+                cursor.execute(query, args)
+                db.commit()
+            except MySQLdb.OperationalError, e:
+                self.reconnect()
+            else:
+                break
+
     def set_url_desc(self, urlno, desc):
         query = """UPDATE url SET description = %s WHERE id = %s"""
 
@@ -786,6 +802,12 @@ class UrlSnarfer:
             if response.nsfw != new_nsfw:
                 response.nsfw = new_nsfw
                 self.db.set_url_nsfw(response.id, new_nsfw)
+
+            if not response.title:
+                title = self.get_title(url, r)
+                if title:
+                    self.db.set_url_title(response.id, title)
+                    response.title = title
 
             if response.description == "" or response.description == None:
                 desc = self.get_description(url, r)
