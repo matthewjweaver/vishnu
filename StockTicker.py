@@ -257,7 +257,6 @@ class StockTicker:
         }
         return sym
 
-    campbx_market = "markets.json"
     def campbx_ticker(self):
         c = CampBX()
 
@@ -267,6 +266,7 @@ class StockTicker:
         open = int(time.mktime((now[0], now[1], now[2],
                                 0, 0, 0,
                                 now[6], now[7], now[8])))
+        now = time.time()
 
         url = "http://api.bitcoincharts.com/v1/trades.csv?symbol=cbxUSD&start=%d" % open
         r = self.browser.open(url)
@@ -289,7 +289,8 @@ class StockTicker:
 
         volume = "(unknown)"
         if self.last_cbxusd_market_query is not None:
-            volume = "%s BTC" % self.last_cbxusd_market_query['volume']
+            v = float(self.last_cbxusd_market_query['volume'])
+            volume = "%.2f BTC" % v
         
         sym = {
             'n' : 'CAMPBX',
