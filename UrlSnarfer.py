@@ -111,7 +111,7 @@ class TwitterUrlHelper(UrlHelper):
         resp = snarfer.open_url(url)
         html = resp.read()
         s = BeautifulSoup(html)
-        p = s.findAll('p', 'tweet-text')
+        p = s.findAll('p', 'permalink-tweet', 'js-tweet-text')
         text = None
         if p:
             for part in p[0].contents:
