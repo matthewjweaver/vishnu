@@ -111,7 +111,7 @@ class TwitterUrlHelper(UrlHelper):
         resp = snarfer.open_url(url)
         html = resp.read()
         s = BeautifulSoup(html)
-        p = s.findAll('p', 'tweet-text')
+        p = s.findAll('p', 'permalink-tweet', 'js-tweet-text')
         text = None
         if p:
             for part in p[0].contents:
@@ -208,7 +208,11 @@ class YoutubeUrlHelper(UrlHelper):
         titleCharms = ""
 
         if 't' in query:
-            params += "&t=" + str(query['t'][0])
+            params += "#t=" + str(query['t'][0])
+            titleCharms += " [timecode]"
+
+        if pURL.fragment and (pURL.fragment.find("t=") > -1):
+            params += "#" + pURL.fragment
             titleCharms += " [timecode]"
 
         if 'list' in query:
@@ -216,10 +220,10 @@ class YoutubeUrlHelper(UrlHelper):
             titleCharms += " [playlist]"
 
         if 'youtu.be' in pURL.netloc:
-            targetUrl = "http://youtube.com/watch?v=" + pURL.path[1:]
+            targetUrl = "https://www.youtube.com/watch?v=" + pURL.path[1:]
             targetUrl += params
         elif 'v' in query:
-            targetUrl = "http://youtube.com/watch?v=" + str(query['v'][0])
+            targetUrl = "https://www.youtube.com/watch?v=" + str(query['v'][0])
             targetUrl += params
         else:
             targetUrl = url
