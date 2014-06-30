@@ -7,7 +7,7 @@ import datetime
 import sys
 import re
 
-url = r"http://mlb.mlb.com/lookup/json/named.standings_schedule_date.bam?season=2013&schedule_game_date.game_date='%s'&sit_code='h0'&league_id=103&league_id=104&all_star_sw='N'&version=2"
+url = r"http://mlb.mlb.com/lookup/json/named.standings_schedule_date.bam?season=2014&schedule_game_date.game_date='%s'&sit_code='h0'&league_id=103&league_id=104&all_star_sw='N'&version=2"
 
 class MLBTicker:
     def __init__(self, browser):
