@@ -51,16 +51,21 @@ class MLBTicker:
 
         place = st['place']
         gb = None
-        if int(place) != 1:
+        if 'gb' in st:
             gb = st['gb']
-        if place == "1":
-            place = "1st"
-        elif place == "2":
-            place = "2nd"
-        elif place == "3":
-            place = "3rd"
+        if place != "":
+            if int(place) != 1:
+                gb = st['gb']
+            if place == "1":
+                place = "1st"
+            elif place == "2":
+                place = "2nd"
+            elif place == "3":
+                place = "3rd"
+            else:
+                place += "th"
         else:
-            place += "th"
+            place = "??"
 
         division = st['division']
         division = division.replace("American League", "AL")
