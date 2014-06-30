@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 import gzip
 from optparse import OptionParser
 import HTMLParser
+import twitter
 
 import VishnuBrowser
 from config import *
@@ -97,7 +98,12 @@ class TwitterUrlHelper(UrlHelper):
     def __init__(self):
         UrlHelper.__init__(self)
         self.clear_title = True
-        self.url_regex = re.compile("twitter.com/.*/status")
+        self.url_regex = re.compile("twitter.com.*status")
+        self.twitterApi = twitter.Api(
+            consumer_key=config.twitter_consumer_key,
+            consumer_secret=config.twitter_consumer_secret,
+            access_token_key=config.twitter_access_token_key,
+            access_token_secret=config.twitter_access_token_secret)
 
     def match(self, url):
         if self.url_regex.search(url):
@@ -108,28 +114,15 @@ class TwitterUrlHelper(UrlHelper):
         url = re.sub("/#!", "", url)
         url = re.sub("^https", "http", url)
         url = re.sub("/photo/.*", "", url)
-        resp = snarfer.open_url(url)
-        html = resp.read()
-        s = BeautifulSoup(html)
-        p = s.findAll('p', 'permalink-tweet', 'js-tweet-text')
-        text = None
-        if p:
-            for part in p[0].contents:
-                if text is None:
-                    text = ""
-                text += unicode(part)
-            text = re.sub(r'<[^>]*?>', '', text)
 
-        #print html
+        regex = re.compile(r".*twitter.com.*status[es]*/(\d+)")
 
-        p = s.findAll('strong', 'fullname')
-        print p
-        if p:
-            name = p[0].contents[0]
-        if text and name:
-            desc = "%s: %s" % (unicode(name), text.strip()) 
-            return {'description': desc}
-        return None
+        tweet_id = re.search(regex, url).group(1)
+
+        tweet = self.twitterApi.GetStatus(id=tweet_id)
+        tweet_desc = "@" + tweet.user.screen_name + ": " + tweet.text
+
+        return {'description': tweet_desc}
 
 class ReadabilityUrlHelper(UrlHelper):
     def __init__(self):
