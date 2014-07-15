@@ -1026,30 +1026,35 @@ class UrlSnarferResponse:
             str += "\n" + desc
         return str
 
+    def pretty_flags(self):
+        flags = []
+        if self.nsfw & 2:
+            flags.append("NSFW")
+        elif self.nsfw & 1:
+            flags.append("~NSFW")
+
+        if self.private:
+            flags.append("P")
+
+        if self.nsfw & 4:
+            flags.append("SPOILERS")
+
+        if flags:
+            return ",".join(flags)
+        else:
+            return None
+
     def pretty_title(self):
         title = self.title
-        if title is None:
-            title = ""
+        if title:
+            title += "" # ensures it's a string
         else:
-            title += ""
-        if self.nsfw > 0 or self.private:
-            title += " ("
-            
-            if self.nsfw & 2:
-                title += "NSFW"
-            elif self.nsfw & 1:
-                title += "~NSFW"
-            if self.nsfw & 4:
-                if self.nsfw != 4:
-                    title += ","
-                title += "SPOILERS"
+            title = self.description
 
-            if self.private:
-                if self.nsfw > 0:
-                    title += ","
-                title += "P"
+        flags = self.pretty_flags()
+        if flags:
+            title = "[" + flags + "] " + title
 
-            title += ")"
         return title
 
     def __str__(self):
@@ -1089,8 +1094,6 @@ if __name__ != '__main__':
                 title = response.pretty_title()
                 if title:
                     desc = '(' + title.replace("\n", "") + ')'
-                elif response.description:
-                    desc = '(' + response.description.replace("\n", "") + ')'
                 if response.count > 1:
                     if desc != "":
                         desc += " "
