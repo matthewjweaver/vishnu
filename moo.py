@@ -4,7 +4,6 @@ import datetime
 import time
 import sgmllib
 
-import UrlSnarfer
 from UrlSnarfer import *
 from StockTicker import StockTickerPlugin
 from ButterflyLabs import ButterflyLabsPlugin
@@ -146,32 +145,6 @@ class Contextualize(MorpheusPlugin):
 #            self.morpheus.reactor.react(event)
 #        else:
 #            print "!google didn't match %s" % orig
-
-
-class StageTalkHandler(MorpheusPlugin):
-    def start(self):
-        self.map("StageTalkEvent")
-
-    def react(self, event):
-        if event.to_who != "vishnu":
-            return
-	line = ""
-        try:
-            describeRe = re.compile(r"describe\s+([a-zA-Z0-9]+)\s+(.*)")
-            m = describeRe.match(event.message)
-            if m is not None:
-                url = m.group(1)
-                description = m.group(2)
-                id = int(UrlSnarfer.urlToId(url))
-
-                query = """UPDATE url SET title = %s WHERE id = %s"""
-                cursor = db.execute(query, [description, id])
-                line = "-%s description updated." % event.from_who
-        except Exception, e:
-            line = "-%s " % event.from_who
-            line += str(e)
-	if line != "":
-		event.socket.command(line)
 
 class WhisperHandler(MorpheusPlugin):
     def start(self):
