@@ -4,7 +4,7 @@ import datetime
 import time
 import sgmllib
 
-from UrlSnarfer import *
+from NewSnarfer import UrlSnarferPlugin
 from StockTicker import StockTickerPlugin
 from ButterflyLabs import ButterflyLabsPlugin
 from GoogleCalculator import GoogleCalculatorPlugin
@@ -324,38 +324,7 @@ class Conversation(WaitOn):
 #        yield self.waiton(".*tylk.*")
 #        self.event.socket.command("say hyllo")
 
-class MooDbInstance:
-    def __init__(self, name, user, passwd, host):
-        self.name = name
-        self.user = user
-        self.passwd = passwd
-        self.host = host
-        try:
-            self.reconnect()
-        except ImportError:
-            raise callbacks.Error, "You need python-mysql installed"
-        except Exception, e:
-            print e
-            raise
-
-    def reconnect(self):
-            self.db = MySQLdb.connect(db=self.name, user=self.user,
-                                      passwd=self.passwd, host=self.host)
-
-    def execute(self, query, values):
-        for i in [1, 1]:
-            try:
-                cursor = self.db.cursor()
-                cursor.execute(query, values)
-            except MySQLdb.OperationalError, e:
-                self.reconnect()
-            else:
-                break
-
-        return cursor
-
 if __name__ == '__main__':
-    db = MooDbInstance(name=db_name, user=db_user, passwd=db_pass, host=db_host)
     morpheus = get_morpheus()
     for arg in sys.argv[1:]:
 	    morpheus.plugin( arg )

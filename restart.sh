@@ -7,4 +7,5 @@ while ! nc -z ib.ice-nine.org 32000; do
 	sleep 1
 done
 
+cd $DIR
 python $DIR/moo.py
