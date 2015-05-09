@@ -112,7 +112,7 @@ for key in fieldmap:
 class StockTicker:
     baseurl = "http://quote.yahoo.com/d/quotes.csv"
     # name, current price, change in price, change in pct
-    defattrs = "nl1c6p2rj1"
+    defattrs = "nl1c6p2rj1r6e7"
     def __init__(self):
         self.browser = VishnuBrowser.VishnuBrowser()
         self.mlb = MLBTicker.MLBTicker(self.browser)
@@ -141,7 +141,9 @@ class StockTicker:
                 m = re.match("([a-z][0-9]?)", attr) 
                 if m:
                     attrmap.append(m.group(1))
-                    attr = re.sub(m.group(1), "", attr)
+                    attr = attr[len(m.group(1)):]
+                else:
+                    break
 
         opts = urllib.urlencode( { 's' : sym, 'f' : 's' + attrs } )
         f = self.browser.open(self.baseurl + "?" + opts)
@@ -197,7 +199,16 @@ class StockTicker:
         else:
             sym = self.get_sym(symbol)
 
-        change = float(sym['c6'])
+        try:
+            value = float(sym['l1'])
+            pct = float(sym['p2'].strip('%')) / 100
+        except ValueError, e:
+            return None
+
+        try:
+            change = float(sym['c6'])
+        except ValueError:
+            change = value - (value / (1+pct))
         color = ""
 
         if change == 0:
@@ -207,16 +218,39 @@ class StockTicker:
         else:
             color = "\\\\r"
 
-        if sym['p2'] == "N/A":
-            return None
-        msg = "%s%s: " % (color, sym['n'])
-        msg += "%s (%s %s" % (sym['l1'], sym['c6'], sym['p2'])
+        c = '\0'
+        if change > 0:
+            c = '+'
+
+        pe = None
+        cap = None
+        btc = None
         if 'r' in sym and sym['r'] != "N/A":
-            msg += " P/E %s" % sym['r']
+            pe = float(sym['r'])
         if 'j1' in sym and sym['j1'] != "N/A":
-            msg += " Cap %s" % sym['j1']
+            cap = sym['j1']
         if 'btc' in sym:
-            msg += " Volume %s" % sym['btc']
+            btc = sym['btc']
+
+        rate = 100
+        if symbol[-2:] == ".L":
+            exch = self.get_sym("GBPUSD=X")
+            rate = float(exch['l1'])
+            value *= rate / 100
+            change *= rate / 100
+            newcap = float(cap[:-1]) * rate
+            unit = cap[:-1]
+            cap = "%.2f%s" % (newcap, cap[-1:])
+            pe = None
+
+        msg = "%s%s: " % (color, sym['n'])
+        msg += "%.2f (%c%.2f %c%.2f%%" % (value, c, change, c, pct *100)
+        if pe is not None:
+            msg += " P/E %.2f" % pe
+        if cap is not None:
+            msg += " Cap %s" % cap
+        if btc is not None:
+            msg += " Volume %s" % btc
         msg += ")"
 
         return msg
