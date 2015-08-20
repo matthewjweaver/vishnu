@@ -574,7 +574,7 @@ class MorpheusRegex(MorpheusPlugin):
         new = classmethod(new)
 
         def __init__(self, event=None):
-            super(MorpheusEvent, self).__init__(event)
+            MorpheusEvent.__init__(self, event)
             if isinstance(event, MorpheusNetwork.SocketEvent):
                 self.socket = event.socket
 

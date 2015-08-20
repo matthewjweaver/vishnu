@@ -4,22 +4,23 @@ import sys
 import time
 import string
 import mechanize
+import config
 import traceback
 import MySQLdb
 import getpass
 import urllib2
 from urllib import urlencode
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 import gzip
 from optparse import OptionParser
 import HTMLParser
-
+import twitter
 
 import VishnuBrowser
 from config import *
 
 ipAddressRegex = re.compile(r"^((((([0-9]{1,3})\.){3})([0-9]{1,3}))((\/[^\s]+)|))$")
-urlRegex = re.compile(r"\s*(([\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
+urlRegex = re.compile(r"(^|\s+)(([\|\$\!\~\^]+)|)(((([\w\-]+\.)+)([\w\-]+))(((/[\w\-\.%\(\)~]*)+)+|\s+|[\!\?\.,;]+|$)|https?://[^\]>\s]*)")
 selfRefRegex = re.compile(r"http://(www.|)ice-nine.org/(l|link.php)/([A-Za-z0-9]+)")
 httpUrlRegex = re.compile(r"(https?://[^\]>\s]+)", re.I)
 googleRegex = re.compile(r"^(\w*\s*\|\s*|)@google (.*)", re.I)
@@ -34,6 +35,40 @@ class UrlHelper(object):
         return {'url': None,
                 'title': None,
                 'description': None };
+
+class BurrowikiUrlHelper(UrlHelper):
+    def __init__(self):
+        UrlHelper.__init__(self)
+        self.clear_title = True
+        self.url_regex = re.compile("wiki.dosburros.com/.*")
+
+    def match(self, url):
+        if self.url_regex.search(url):
+            return True
+        return False
+
+    def fetch(self, snarfer, url, resp):
+        br = mechanize.Browser()
+
+        cj = mechanize.MozillaCookieJar()
+        cj.load(config.cookiejar)
+        br.set_cookiejar(cj)
+
+        br.open(url)
+
+        if( br.title().find("ogin required") != -1 ):
+            print "Logging into Burrowiki"
+            br.open(config.wikiloginpage)
+            br.select_form(name="userlogin")
+            br["wpName"] = config.wikiuser
+            br["wpPassword"] = config.wikipass
+            br.find_control("wpRemember").items[0].selected=True
+            br.submit()
+            br.open(url)
+            cj.save(config.cookiejar)
+
+        return {'description': br.title(),
+                'url' : url }
 
 class ImgUrUrlHelper(UrlHelper):
     def __init__(self):
@@ -54,13 +89,21 @@ class ImgUrUrlHelper(UrlHelper):
         title = snarfer.browser.title()
         if title is not None:
             title = " ".join(title.split())
-        return {'description': title}
+
+        print "returning %s" % url
+        return {'description': title,
+                'url' : url }
 
 class TwitterUrlHelper(UrlHelper):
     def __init__(self):
         UrlHelper.__init__(self)
         self.clear_title = True
-        self.url_regex = re.compile("twitter.com/.*/status")
+        self.url_regex = re.compile("twitter.com.*status")
+        self.twitterApi = twitter.Api(
+            consumer_key=config.twitter_consumer_key,
+            consumer_secret=config.twitter_consumer_secret,
+            access_token_key=config.twitter_access_token_key,
+            access_token_secret=config.twitter_access_token_secret)
 
     def match(self, url):
         if self.url_regex.search(url):
@@ -70,28 +113,16 @@ class TwitterUrlHelper(UrlHelper):
     def fetch(self, snarfer, url, resp):
         url = re.sub("/#!", "", url)
         url = re.sub("^https", "http", url)
-        resp = snarfer.open_url(url)
-        html = resp.read()
-        s = BeautifulSoup(html)
-        p = s.findAll('p', 'tweet-text')
-        text = None
-        if p:
-            for part in p[0].contents:
-                if text is None:
-                    text = ""
-                text += str(part)
-            text = re.sub(r'<[^>]*?>', '', text)
+        url = re.sub("/photo/.*", "", url)
 
-        #print html
+        regex = re.compile(r".*twitter.com.*status[es]*/(\d+)")
 
-        p = s.findAll('strong', 'fullname')
-        print p
-        if p:
-            name = p[0].contents[0]
-        if text and name:
-            desc = "%s: %s" % (str(name), text.strip()) 
-            return {'description': desc}
-        return None
+        tweet_id = re.search(regex, url).group(1)
+
+        tweet = self.twitterApi.GetStatus(id=tweet_id)
+        tweet_desc = "@" + tweet.user.screen_name + ": " + tweet.text
+
+        return {'description': tweet_desc}
 
 class ReadabilityUrlHelper(UrlHelper):
     def __init__(self):
@@ -111,16 +142,7 @@ class ReadabilityUrlHelper(UrlHelper):
         html = resp.read()
         s = BeautifulSoup(html)
 
-        links = s.findAll("link")
-
-        for link in links:
-            if link['rel'] == 'canonical':
-                original = urllib2.urlopen(link['href']).read()
-                sO = BeautifulSoup(original)
-
-                return {'title': sO.title.string, 'url': link['href']}
-
-        return None
+        return {'title': s.title.string, 'url': resp.geturl() }
 
 class ShortUrlHelper(UrlHelper):
     def __init__(self):
@@ -151,11 +173,69 @@ class ShortUrlHelper(UrlHelper):
 
         return {'title': sO.title.string, 'url': targeturl }
 
+class YoutubeUrlHelper(UrlHelper):
+    def __init__(self):
+        UrlHelper.__init__(self)
+        self.clear_title = False
+
+        domains = [ "youtube\.com",
+                    "youtu\.be"
+                  ];
+
+        self.url_regex = re.compile("(" + string.join(domains,"|") + ")/.*")
+
+    def match(self, url):
+        if self.url_regex.search(url):
+            return True
+        return False
+
+    def fetch(self, snarfer, url, resp):
+        from urlparse import urlparse, parse_qs
+
+        targetUrl = url
+
+        pURL = urlparse(url)
+        query = parse_qs(pURL.query)
+
+        params = ""
+        titleCharms = ""
+
+        if 't' in query:
+            params += "#t=" + str(query['t'][0])
+            titleCharms += " [timecode]"
+
+        if pURL.fragment and (pURL.fragment.find("t=") > -1):
+            params += "#" + pURL.fragment
+            titleCharms += " [timecode]"
+
+        if 'list' in query:
+            params += "&list=" + str(query['list'][0]) 
+            titleCharms += " [playlist]"
+
+        if 'youtu.be' in pURL.netloc:
+            targetUrl = "https://www.youtube.com/watch?v=" + pURL.path[1:]
+            targetUrl += params
+        elif 'v' in query:
+            targetUrl = "https://www.youtube.com/watch?v=" + str(query['v'][0])
+            targetUrl += params
+        else:
+            targetUrl = url
+            targetUrl = re.sub("^https", "http", url)
+
+        target = urllib2.urlopen(targetUrl)
+
+        sO = BeautifulSoup(target.read())
+
+        title = sO.title.string + titleCharms
+
+        return {'title': title, 'url': targetUrl }
 
 helpers.append(ImgUrUrlHelper())
+helpers.append(BurrowikiUrlHelper())
 helpers.append(TwitterUrlHelper())
 helpers.append(ReadabilityUrlHelper())
 helpers.append(ShortUrlHelper())
+helpers.append(YoutubeUrlHelper())
 
 def find_url_helper(url):
     for helper in helpers:
@@ -293,6 +373,22 @@ class MysqlUrlDb(UrlDB):
         query = """UPDATE url SET title = %s WHERE id = %s"""
 
         args = ['', urlno]
+
+        for i in [0, 1]:
+            try:
+                db = self.sqlDb
+                cursor = db.cursor()
+                cursor.execute(query, args)
+                db.commit()
+            except MySQLdb.OperationalError, e:
+                self.reconnect()
+            else:
+                break
+
+    def set_url_title(self, urlno, title):
+        query = """UPDATE url SET title = %s WHERE id = %s"""
+
+        args = [title, urlno]
 
         for i in [0, 1]:
             try:
@@ -501,19 +597,20 @@ class UrlSnarfer:
         if match is None:
             return None
 
-        url = match.group(3)
-        mods = match.group(1)
+        url = match.group(4)
+        mods = match.group(2)
 
         private = False
         nsfw = 0
         if mods:
+            if '$' in mods:
+                nsfw |= 4
             if '!' in mods:
-                nsfw = 2
-            if '~' in mods:
-                nsfw = 1
+                nsfw |= 2
+            elif '~' in mods:
+                nsfw |= 1
             if '^' in mods:
                 private = True
-
 
         # URL without a protocol:// prefix
         if not httpUrlRegex.search(url):
@@ -643,7 +740,7 @@ class UrlSnarfer:
             result = h.fetch(self, url, resp)
     
             if result and 'title' in result:
-                return result['title']
+                return result['title'].strip()
             else:
                 return None
 
@@ -686,12 +783,26 @@ class UrlSnarfer:
             else:
                 type = response.type
 
-            if response.nsfw < nsfw:
-                response.nsfw = nsfw
-                self.db.set_url_nsfw(response.id, nsfw)
+            new_nsfw = response.nsfw
+            if response.nsfw == 0:
+                new_nsfw |= nsfw
+            elif (response.nsfw & 3) == 1 and (nsfw & 2):
+                new_nsfw |= 2
+                new_nsfw &= ~1
+
+            new_nsfw |= (nsfw & ~3)
+
+            if response.nsfw != new_nsfw:
+                response.nsfw = new_nsfw
+                self.db.set_url_nsfw(response.id, new_nsfw)
+
+            if not response.title:
+                title = self.get_title(url, r)
+                if title:
+                    self.db.set_url_title(response.id, title)
+                    response.title = title
 
             if response.description == "" or response.description == None:
-                print "Updating description"
                 desc = self.get_description(url, r)
                 if desc:
                     self.db.set_url_desc(response.id, desc)
@@ -915,28 +1026,35 @@ class UrlSnarferResponse:
             str += "\n" + desc
         return str
 
+    def pretty_flags(self):
+        flags = []
+        if self.nsfw & 2:
+            flags.append("NSFW")
+        elif self.nsfw & 1:
+            flags.append("~NSFW")
+
+        if self.private:
+            flags.append("P")
+
+        if self.nsfw & 4:
+            flags.append("SPOILERS")
+
+        if flags:
+            return ",".join(flags)
+        else:
+            return None
+
     def pretty_title(self):
         title = self.title
-        if title is None:
-            title = ""
+        if title:
+            title += "" # ensures it's a string
         else:
-            title += ""
-        if self.nsfw > 0 or self.private:
-            title += "("
-            
-            if self.nsfw == 2:
-                title += "NSFW"
-            elif self.nsfw == 1:
-                title += "~NSFW"
-            elif self.nsfw != 0:
-                title += "?NSFW"
+            title = self.description
 
-            if self.private:
-                if self.nsfw > 0:
-                    title += ","
-                title += "P"
+        flags = self.pretty_flags()
+        if flags:
+            title = "[" + flags + "] " + title
 
-            title += ")"
         return title
 
     def __str__(self):
@@ -949,6 +1067,7 @@ if __name__ != '__main__':
             PlayerPlugin.__init__(self)
             self.db = MysqlUrlDb(db_host, db_name, db_user, db_pass)
             UrlSnarfer.__init__(self, self.db)
+            self.parser = HTMLParser.HTMLParser()
 
         def die(self):
             self.db.close()
@@ -975,8 +1094,6 @@ if __name__ != '__main__':
                 title = response.pretty_title()
                 if title:
                     desc = '(' + title.replace("\n", "") + ')'
-                elif response.description:
-                    desc = '(' + response.description.replace("\n", "") + ')'
                 if response.count > 1:
                     if desc != "":
                         desc += " "
@@ -992,6 +1109,8 @@ if __name__ != '__main__':
         def link(self, event, url, shorturl, description):
             self.say(event, shorturl)
             if description is not None and description != "":
+                description = self.parser.unescape(description)
+                description = re.sub(r"\n+", "  ", description)
                 self.say(event, description)
             event.socket.command(";#212:_fromVishnu(\"" + url + "\")")
 
@@ -999,10 +1118,14 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-u", "--update", action="store_true", default=False)
     parser.add_option("-n", "--count", action="store", default=10)
+    parser.add_option("-U", "--user", action="store", default=None)
 
     (options, urls) = parser.parse_args()
 
     user = getpass.getuser()
+    if options.user:
+        user = options.user
+
     db = MysqlUrlDb(db_host, db_name, db_user, db_pass)
     u = UrlSnarfer(db)
 
@@ -1034,7 +1157,7 @@ if __name__ == '__main__':
         print "Trying " + arg
         try:
             response = u.snarf(arg, user, False)
-            print response
+            print response.title
         except Exception, e:
             print e
 

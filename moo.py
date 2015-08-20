@@ -1,12 +1,13 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 import re
 import datetime
 import time
 import sgmllib
 
-import UrlSnarfer
-from UrlSnarfer import *
+from NewSnarfer import UrlSnarferPlugin
 from StockTicker import StockTickerPlugin
+from ButterflyLabs import ButterflyLabsPlugin
+from GoogleCalculator import GoogleCalculatorPlugin
 
 from morpheus import *
 from config import *
@@ -46,7 +47,7 @@ class Contextualize(MorpheusPlugin):
         to_who = ''
 
         def __init__(self, event=None, message='', from_who='', from_who_objid=-1, to_who=''):
-            super(MorpheusEvent, self).__init__(event)
+            MorpheusEvent.__init__(self, event)
             if isinstance(event, MorpheusNetwork.SocketEvent):
                 self.socket = event.socket
             self.from_who = from_who
@@ -144,32 +145,6 @@ class Contextualize(MorpheusPlugin):
 #            self.morpheus.reactor.react(event)
 #        else:
 #            print "!google didn't match %s" % orig
-
-
-class StageTalkHandler(MorpheusPlugin):
-    def start(self):
-        self.map("StageTalkEvent")
-
-    def react(self, event):
-        if event.to_who != "vishnu":
-            return
-	line = ""
-        try:
-            describeRe = re.compile(r"describe\s+([a-zA-Z0-9]+)\s+(.*)")
-            m = describeRe.match(event.message)
-            if m is not None:
-                url = m.group(1)
-                description = m.group(2)
-                id = int(UrlSnarfer.urlToId(url))
-
-                query = """UPDATE url SET title = %s WHERE id = %s"""
-                cursor = db.execute(query, [description, id])
-                line = "-%s description updated." % event.from_who
-        except Exception, e:
-            line = "-%s " % event.from_who
-            line += str(e)
-	if line != "":
-		event.socket.command(line)
 
 class WhisperHandler(MorpheusPlugin):
     def start(self):
@@ -349,38 +324,7 @@ class Conversation(WaitOn):
 #        yield self.waiton(".*tylk.*")
 #        self.event.socket.command("say hyllo")
 
-class MooDbInstance:
-    def __init__(self, name, user, passwd, host):
-        self.name = name
-        self.user = user
-        self.passwd = passwd
-        self.host = host
-        try:
-            self.reconnect()
-        except ImportError:
-            raise callbacks.Error, "You need python-mysql installed"
-        except Exception, e:
-            print e
-            raise
-
-    def reconnect(self):
-            self.db = MySQLdb.connect(db=self.name, user=self.user,
-                                      passwd=self.passwd, host=self.host)
-
-    def execute(self, query, values):
-        for i in [1, 1]:
-            try:
-                cursor = self.db.cursor()
-                cursor.execute(query, values)
-            except MySQLdb.OperationalError, e:
-                self.reconnect()
-            else:
-                break
-
-        return cursor
-
 if __name__ == '__main__':
-    db = MooDbInstance(name=db_name, user=db_user, passwd=db_pass, host=db_host)
     morpheus = get_morpheus()
     for arg in sys.argv[1:]:
 	    morpheus.plugin( arg )
